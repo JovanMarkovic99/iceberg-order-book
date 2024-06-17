@@ -17,6 +17,12 @@ namespace jvn
         
     public:
         Limit(limit_type limit);
+        Limit(const Limit&) = delete;
+        Limit(Limit&&) = default;
+        ~Limit() = default;
+
+        Limit& operator=(const Limit&) = delete;
+        Limit& operator=(Limit&&) = default;
 
         ALWAYS_INLINE [[nodiscard]] Order* front();
         ALWAYS_INLINE std::unique_ptr<Order> popFront();

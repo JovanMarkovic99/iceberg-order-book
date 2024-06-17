@@ -1,10 +1,10 @@
 #pragma once
 
 #include "Limit.hpp"
+
 #include <memory>
 #include <map>
 #include <vector>
-#include <iostream>
 
 namespace jvn 
 {
@@ -30,14 +30,29 @@ namespace jvn
         using buy_const_iterator = buy_map_type::const_iterator;
 
     public:
-        OrderBook();
+        OrderBook() = default;
+        OrderBook(const OrderBook&) = delete;
+        OrderBook(OrderBook&&) = default;
+        ~OrderBook() = default;
+
+        OrderBook& operator=(const OrderBook&) = delete;
+        OrderBook& operator=(OrderBook&&) = default;
 
         std::vector<Match> processOrder(std::unique_ptr<Order> order);
+
+        ALWAYS_INLINE buy_const_iterator buyBegin() const noexcept;
+        ALWAYS_INLINE sell_const_iterator sellBegin() const noexcept;
+        ALWAYS_INLINE buy_const_iterator buyEnd() const noexcept;
+        ALWAYS_INLINE sell_const_iterator sellEnd() const noexcept;
     private:
         sell_map_type m_sell_map;
         buy_map_type m_buy_map;
 
-        sell_iterator m_lowest_sell;
-        buy_iterator m_highest_buy;
+        template <class MapTy>
+        static std::vector<Match> matchOrder(MapTy& map, Order* order);
+        template <class MapTy>
+        static void addOrder(MapTy& map, std::unique_ptr<Order> order);
+        template <OrderType OrderTy>
+        static void mergeIcebergs(std::vector<Match>& matches);
     };
 }
