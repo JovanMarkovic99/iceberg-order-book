@@ -38,7 +38,7 @@ namespace jvn
         OrderBook& operator=(const OrderBook&) = delete;
         OrderBook& operator=(OrderBook&&) = default;
 
-        std::vector<Match> processOrder(std::unique_ptr<Order> order);
+        [[nodiscard]] std::vector<Match> processOrder(std::unique_ptr<Order> order);
 
         ALWAYS_INLINE buy_const_iterator buyBegin() const noexcept;
         ALWAYS_INLINE sell_const_iterator sellBegin() const noexcept;
@@ -55,4 +55,21 @@ namespace jvn
         template <OrderType OrderTy>
         static void mergeIcebergs(std::vector<Match>& matches);
     };
+
+
+    OrderBook::buy_const_iterator OrderBook::buyBegin() const noexcept {
+        return m_buy_map.begin();
+    }
+
+    OrderBook::sell_const_iterator OrderBook::sellBegin() const noexcept {
+        return m_sell_map.begin();
+    }
+
+    OrderBook::buy_const_iterator OrderBook::buyEnd() const noexcept {
+        return m_buy_map.end();
+    }
+
+    OrderBook::sell_const_iterator OrderBook::sellEnd() const noexcept {
+        return m_sell_map.end();
+    }
 }

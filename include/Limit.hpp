@@ -25,6 +25,7 @@ namespace jvn
         Limit& operator=(Limit&&) = default;
 
         ALWAYS_INLINE [[nodiscard]] Order* front();
+        ALWAYS_INLINE [[nodiscard]] const Order* front() const;
         ALWAYS_INLINE std::unique_ptr<Order> popFront();
 
         ALWAYS_INLINE void pushBack(std::unique_ptr<Order> order) noexcept;
@@ -40,4 +41,51 @@ namespace jvn
         limit_type m_limit;
         list_type m_orders;
     };
+
+
+    Order* Limit::front() {
+        assert(!isEmpty());
+        return m_orders.front().get();
+    }
+
+    const Order* Limit::front() const {
+        assert(!isEmpty());
+        return m_orders.front().get();
+    }
+
+    std::unique_ptr<Order> Limit::popFront() {
+        assert(!isEmpty());
+        std::unique_ptr<Order> front_order = std::move(m_orders.front());
+        m_orders.pop_front();
+        return front_order;
+    }
+
+    void Limit::pushBack(std::unique_ptr<Order> order) noexcept {
+        assert(order && order->getLimit() == m_limit);
+        m_orders.emplace_back(std::move(order));
+    }
+
+    Limit::limit_type Limit::getLimit() const noexcept {
+        return m_limit;
+    }
+
+    bool Limit::isEmpty() const noexcept {
+        return m_orders.empty();
+    }
+
+    Limit::iterator Limit::begin() noexcept {
+        return m_orders.begin();
+    }
+
+    Limit::iterator Limit::end() noexcept {
+        return m_orders.end();
+    }
+
+    Limit::const_iterator Limit::begin() const noexcept {
+        return m_orders.begin();
+    }
+
+    Limit::const_iterator Limit::end() const noexcept {
+        return m_orders.end();
+    }
 }
