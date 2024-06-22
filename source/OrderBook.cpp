@@ -15,13 +15,13 @@ namespace jvn
             matches = matchOrder(m_buy_map, order.get());
             mergeIcebergs<OrderType::SELL>(matches);
 
-            if (order->getQuantity() > 0)
+            if (order->getQuantity())
                 addOrder(m_sell_map, std::move(order));
         } else {
             matches = matchOrder(m_sell_map, order.get());
             mergeIcebergs<OrderType::BUY>(matches);
             
-            if (order->getQuantity() > 0)
+            if (order->getQuantity())
                 addOrder(m_buy_map, std::move(order));
         }
 
@@ -72,7 +72,7 @@ namespace jvn
                 else if (top_limit().isEmpty()) {
                     map_iter = map.erase(map_iter);
                     if (!is_matchable())
-                        return matches;
+                        break;
                 }
             } else {
                 create_match(order->getQuantity());
@@ -89,9 +89,7 @@ namespace jvn
 
     template <class MapTy>
     void OrderBook::addOrder(MapTy& map, std::unique_ptr<Order> order) {
-        if (order->getQuantity() == 0)
-            return;
-
+        assert(order->getQuantity());
         auto [iter, inserted] = map.emplace(order->getLimit(), order->getLimit());
         iter->second.pushBack(std::move(order));
     }
