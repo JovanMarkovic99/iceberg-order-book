@@ -1,7 +1,5 @@
 #pragma once
 
-#include <cstdint>
-
 using OrderId = int;
 using Quantity = int;
 using Price = short;

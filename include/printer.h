@@ -4,6 +4,7 @@
 #include <string>
 #include <string_view>
 #include <array>
+#include <cstdint>
 
 #include "matching_engine.h"
 
