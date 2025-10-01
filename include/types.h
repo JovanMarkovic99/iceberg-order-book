@@ -15,7 +15,7 @@ struct Order {
     OrderId id;
     Price price;
     Quantity visible_qty;
-    Quantity initial_visible_qty;
+    Quantity peak_qty;
     Quantity hidden_qty;
 };
 

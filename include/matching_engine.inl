@@ -30,15 +30,15 @@ ALWAYS_INLINE void MatchingEngine::match(Order& aggressive_order, OrderBookSide&
         && !contra_side.empty() && !cmp(aggressive_order.price, contra_side.bestPrice())) {
         auto level_price = contra_side.bestPrice();
         do {
-            auto passive_order = contra_side.bestOrder();
+            const auto& passive_order = contra_side.bestOrder();
             auto trade_qty = std::min(aggressive_qty, passive_order.visible_qty);
+            addTrade(aggressive_order, passive_order, trade_qty);
             aggressive_qty -= trade_qty;
             contra_side.consumeBest(trade_qty);
-            addTrade(aggressive_order, passive_order, trade_qty);
         } while (aggressive_qty && !contra_side.empty() && contra_side.bestPrice() == level_price);
     }
 
-    aggressive_order.visible_qty = std::min(aggressive_qty, aggressive_order.initial_visible_qty);
+    aggressive_order.visible_qty = std::min(aggressive_qty, aggressive_order.peak_qty);
     aggressive_order.hidden_qty = aggressive_qty - aggressive_order.visible_qty;
 }
 
@@ -52,11 +52,11 @@ ALWAYS_INLINE void MatchingEngine::addTrade(
         return;
     }
 
-    auto [aggresiveIdField, passiveIdField] = (aggressive_order.side == Order::Side::BUY)
+    auto [aggressiveIdField, passiveIdField] = (aggressive_order.side == Order::Side::BUY)
         ? std::pair{&Trade::buy_id, &Trade::sell_id}
         : std::pair{&Trade::sell_id, &Trade::buy_id};
     Trade trade;
-    trade.*aggresiveIdField = aggressive_order.id;
+    trade.*aggressiveIdField = aggressive_order.id;
     trade.*passiveIdField = passive_order.id;
     trade.price = passive_order.price;
     trade.qty = qty;

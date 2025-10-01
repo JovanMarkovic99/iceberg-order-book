@@ -1,6 +1,7 @@
 #include <utility>
 #include <cassert>
 #include <type_traits>
+#include <new>
 
 #include "util.h"
 
@@ -42,9 +43,8 @@ template <class Allocator>
 ALWAYS_INLINE void PriceLevel<Allocator>::pushBack(const Order& order) {
     auto* node = alloc_.allocate(1);
     static_assert(std::is_same_v<decltype(node), OrderNode*>);
-
     assert(node);
-    ::new (node) OrderNode{order, nullptr};
+    node = std::launder(::new (node) OrderNode{order, nullptr});
 
     if (tail_)
         tail_ = tail_->next = node;

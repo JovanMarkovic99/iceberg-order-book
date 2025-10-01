@@ -28,7 +28,7 @@ private:
     static constexpr char VERTICAL_EDGE_CHAR = '|';
     static constexpr char SEPARATOR_CHAR = ' ';
 
-    using OrderMemberGetter = int(*)(const Order&);
+    using OrderMemberGetter = int64_t(*)(const Order&);
     struct SectionInfo {
         std::string_view text;
         size_t width;
@@ -39,22 +39,23 @@ private:
         SectionInfo{
             .text = " Id ",
             .width = ID_COLUMN_WIDTH,
-            .getter = [](const Order& order) -> int { return order.id; },
+            .getter = [](const Order& order) -> int64_t { return order.id; },
             .format_number = false
         },
         SectionInfo{
             .text = " Volume ",
             .width = VOLUME_COLUMN_WIDTH,
-            .getter = [](const Order& order) -> int { return order.visible_qty; },
+            .getter = [](const Order& order) -> int64_t { return order.visible_qty; },
             .format_number = true
         },
         SectionInfo{
             .text = " Price ",
             .width = PRICE_COLUMN_WIDTH,
-            .getter = [](const Order& order) -> int { return order.price; },
+            .getter = [](const Order& order) -> int64_t { return order.price; },
             .format_number = true
         }
     };
+    // Order of columns: Id, Volume, Price | Price, Volume, Id
     static constexpr std::array<size_t, 6> SECTION_INDICES = {0, 1, 2, 2, 1, 0};
 
     static void printHeader(std::ostream &os);
@@ -65,6 +66,6 @@ private:
 
     static void printOrderSection(const Order* order, Order::Side side, std::ostream& os);
 
-    [[nodiscard]] static std::string intToString(int num, bool format);
+    [[nodiscard]] static std::string intToString(int64_t num, bool format);
 
 };

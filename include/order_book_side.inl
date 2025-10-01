@@ -5,7 +5,7 @@
 
 ALWAYS_INLINE OrderBookSide::OrderBookSide(bool is_buy)
     : is_buy_(is_buy)
-    , cmp_([this](Price lhs, Price rhs) { return is_buy_ ? lhs > rhs : lhs < rhs; })
+    , cmp_([is_buy](Price lhs, Price rhs) { return is_buy ? lhs > rhs : lhs < rhs; })
     , levels_map_(cmp_) {
 }
 
@@ -37,8 +37,7 @@ ALWAYS_INLINE void OrderBookSide::addOrder(const Order& order) {
     bool is_buy_order = order.side == Order::Side::BUY;
     assert(is_buy_order == isBuy());
 
-    auto [iter, inserted] = levels_map_.emplace(std::piecewise_construct,
-        std::forward_as_tuple(order.price), std::forward_as_tuple(order.price, node_alloc_));
+    auto [iter, inserted] = levels_map_.try_emplace(order.price, order.price, node_alloc_);
     auto& [price, level] = *iter;
     return level.pushBack(order);
 }
@@ -50,7 +49,7 @@ ALWAYS_INLINE Quantity OrderBookSide::consumeBest(Quantity qty) {
     order.visible_qty -= consumed;
     if (order.visible_qty == 0) {
         if (order.hidden_qty) {
-            order.visible_qty = std::min(order.hidden_qty, order.initial_visible_qty);
+            order.visible_qty = std::min(order.hidden_qty, order.peak_qty);
             order.hidden_qty -= order.visible_qty;
             level.pushBack(order);
             level.popFront();

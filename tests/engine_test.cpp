@@ -22,14 +22,15 @@ protected:
     MatchingEngine engine;
 };
 
-Order makeOrder(Order::Side side, OrderId id, Price price, Quantity qty, Quantity peak_qty = 0) {
+Order makeOrder(Order::Side side, OrderId id, Price price, Quantity qty,
+    Quantity iceberg_peak_qty = 0) {
     Quantity visible_qty = qty,
-        initial_visible_qty = qty,
+        peak_qty = qty,
         hidden_qty = 0;
-    if (peak_qty) {
+    if (iceberg_peak_qty) {
         hidden_qty = visible_qty;
-        initial_visible_qty = peak_qty;
-        visible_qty = std::min(hidden_qty, initial_visible_qty);
+        peak_qty = iceberg_peak_qty;
+        visible_qty = std::min(hidden_qty, peak_qty);
         hidden_qty -= visible_qty;
     }
     return Order{
@@ -37,7 +38,7 @@ Order makeOrder(Order::Side side, OrderId id, Price price, Quantity qty, Quantit
         .id = id,
         .price = price,
         .visible_qty = visible_qty,
-        .initial_visible_qty = initial_visible_qty,
+        .peak_qty = peak_qty,
         .hidden_qty = hidden_qty
     };
 }

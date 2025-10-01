@@ -91,7 +91,7 @@ void Printer::printOrderSection(const Order* order, Order::Side side, std::ostre
     }
 }
 
-std::string Printer::intToString(int num, bool format) {
+std::string Printer::intToString(int64_t num, bool format) {
     auto result = std::to_string(num);
     if (!format)
         return result;
@@ -103,7 +103,7 @@ std::string Printer::intToString(int num, bool format) {
     std::string formated_result;
     formated_result.reserve(result.size() + result.size() / GROUP_SIZE);
     for (size_t idx = 0; idx < result.size(); ++idx) {
-        if (idx > negative && (result.size() - idx) % GROUP_SIZE == 0)
+        if (idx > static_cast<size_t>(negative) && (result.size() - idx) % GROUP_SIZE == 0)
             formated_result.push_back(GROUP_SEPARATOR);
         formated_result.push_back(result[idx]);
     }

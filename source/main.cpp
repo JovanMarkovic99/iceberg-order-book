@@ -29,13 +29,13 @@ std::optional<Order> getOrder() {
     Price price = static_cast<Price>(std::stoi(tokens[2]));
     Quantity qty = std::stoi(tokens[3]),
         visible_qty = qty,
-        initial_visible_qty = qty,
+        peak_qty = qty,
         hidden_qty = 0;
 
     if (tokens.size() > 4) {
-        initial_visible_qty = std::stoi(tokens[4]);
+        peak_qty = std::stoi(tokens[4]);
         hidden_qty = visible_qty;
-        visible_qty = std::min(initial_visible_qty, hidden_qty);
+        visible_qty = std::min(peak_qty, hidden_qty);
         hidden_qty -= visible_qty;
     }
 
@@ -45,7 +45,7 @@ std::optional<Order> getOrder() {
         .id = id,
         .price = price,
         .visible_qty = visible_qty,
-        .initial_visible_qty = initial_visible_qty,
+        .peak_qty = peak_qty,
         .hidden_qty = hidden_qty
     };
 }
