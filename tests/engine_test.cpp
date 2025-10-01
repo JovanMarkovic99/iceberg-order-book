@@ -42,7 +42,7 @@ Order makeOrder(Order::Side side, OrderId id, Price price, Quantity qty, Quantit
     };
 }
 
-TEST_F(MatchingEngineFixture, AgressiveIcebergOrder) {
+TEST_F(MatchingEngineFixture, AggressiveIcebergOrder) {
     Printer::print(engine.process(makeOrder(Order::Side::BUY, 100322, 5103, 7500)));
     EXPECT_EQ(buffer.str(), "");
 
