@@ -1,63 +1,61 @@
-
-#include "../include/OrderBookPrinter.hpp"
-
+#include <optional>
+#include <algorithm>
 #include <vector>
 #include <string>
-#include <iostream>
 #include <sstream>
-#include <algorithm>
 
-using namespace jvn;
+#include "../include/printer.h"
 
 std::vector<std::string> delimString(const std::string& str, char delimiter) {
     std::vector<std::string> tokens;
     std::istringstream iss(str);
     std::string token;
-    while (std::getline(iss, token, ','))
+    while (std::getline(iss, token, delimiter))
         tokens.push_back(token);
-
     return tokens;
 }
 
-std::unique_ptr<Order> generateOrder() {
+std::optional<Order> getOrder() {
     std::string input;
     std::getline(std::cin, input);
-
-    input.erase(std::remove_if(input.begin(), input.end(), ::isspace), input.end());
+    input.erase(std::remove_if(std::begin(input), std::end(input), ::isspace), std::end(input));
 
     if (!input.size() || (input[0] != 'B' && input[0] != 'S'))
-        return nullptr;
+        return std::nullopt;
 
     auto tokens = delimString(input, ',');
-    OrderType order_type = (tokens[0] == "B") ? OrderType::BUY : OrderType::SELL;
-    Order::id_type id = std::stoi(tokens[1]);
-    Order::limit_type limit = static_cast<Order::limit_type>(std::stoi(tokens[2]));
-    Order::quantity_type quantity = std::stoi(tokens[3]);
+    Order::Side side = (tokens[0] == "B") ? Order::Side::BUY : Order::Side::SELL;
+    OrderId id = std::stoi(tokens[1]);
+    Price price = static_cast<Price>(std::stoi(tokens[2]));
+    Quantity qty = std::stoi(tokens[3]),
+        visible_qty = qty,
+        initial_visible_qty = qty,
+        hidden_qty = 0;
 
-    if (tokens.size() == 4)
-        return std::make_unique<Order>(order_type, id, limit, quantity);
+    if (tokens.size() > 4) {
+        initial_visible_qty = std::stoi(tokens[4]);
+        hidden_qty = visible_qty;
+        visible_qty = std::min(initial_visible_qty, hidden_qty);
+        hidden_qty -= visible_qty;
+    }
 
-    Order::quantity_type peak_size = std::stoi(tokens[4]);
-    
-    return std::make_unique<IcebergOrder>(order_type, id, limit, quantity, peak_size);
-}
-
-std::ostream& operator<<(std::ostream& os, const OrderBook::Match& match) {
-    os << match.buy_id << ',' 
-        << match.sell_id << ',' 
-        << match.limit << ',' 
-        << match.quantity << '\n';
-    return os;
+    return Order{
+        .side = side,
+        .type = Order::Type::LIMIT,
+        .id = id,
+        .price = price,
+        .visible_qty = visible_qty,
+        .initial_visible_qty = initial_visible_qty,
+        .hidden_qty = hidden_qty
+    };
 }
 
 int main() {
-    OrderBook book;
-    for (std::unique_ptr<Order> order = nullptr; ;order = generateOrder())
+    MatchingEngine engine;
+    for (auto order = getOrder(); ; order = getOrder())
         if (order) {
-            for (const auto& match: book.processOrder(std::move(order)))
-                std::cout << match;
-            OrderBookPrinter::print(book);
+            for (const auto &match : engine.process(*order))
+                Printer::print(match);
+            Printer::print(engine);
         }
-
-    return 0;
 }

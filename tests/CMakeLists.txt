@@ -3,9 +3,7 @@ cmake_minimum_required(VERSION 3.26.4)
 set(This UnitTests)
 
 set(Sources
-    OrderTest.cpp   
-    LimitTest.cpp
-    OrderBookTest.cpp
+    engine_test.cpp
 )
 
 add_executable(${This} ${Sources})

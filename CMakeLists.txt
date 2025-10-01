@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 3.26.4)
 project(LOB)
 
-set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 
@@ -16,18 +16,17 @@ set(gtest_force_shared_crt ON CACHE BOOL "" FORCE)
 FetchContent_MakeAvailable(googletest)
 
 set(Headers
-  include/Order.hpp
-  include/Limit.hpp
-  include/OrderBook.hpp
-  include/OrderBookPrinter.hpp
-  include/Util.hpp
+  include/matching_engine.h
+  include/order_book_side.h
+  include/price_level.h
+  include/printer.h
+  include/types.h
+  include/util.h
 )
 
 set(Sources
-  source/Order.cpp
-  source/Limit.cpp
-  source/OrderBook.cpp
-  source/OrderBookPrinter.cpp
+  source/main.cpp
+  source/printer.cpp
 )
 
 add_library(LOB_Library STATIC ${Sources} ${Headers})

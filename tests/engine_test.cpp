@@ -1,15 +1,13 @@
 
-#include "../include/OrderBook.hpp"
-#include "../include/OrderBookPrinter.hpp"
+#include "../include/matching_engine.h"
+#include "../include/printer.h"
 
 #include <gtest/gtest.h>
 #include <iostream>
 #include <sstream>
 #include <streambuf>
 
-using namespace jvn;
-
-class OrderBookFixture: public ::testing::Test {
+class MatchingEngineFixture: public ::testing::Test {
 protected:
     void SetUp() override {
         org_cout = std::cout.rdbuf(buffer.rdbuf());
@@ -21,29 +19,35 @@ protected:
 
     std::stringstream buffer;
     std::streambuf *org_cout;
-    OrderBook book;
+    MatchingEngine engine;
 };
 
-std::ostream& operator<<(std::ostream& os, const OrderBook::Match& match) {
-    os << match.buy_id << ',' 
-        << match.sell_id << ',' 
-        << match.limit << ',' 
-        << match.quantity << '\n';
-    return os;
+Order makeOrder(Order::Side side, OrderId id, Price price, Quantity qty, Quantity peak_qty = 0) {
+    Quantity visible_qty = qty,
+        initial_visible_qty = qty,
+        hidden_qty = 0;
+    if (peak_qty) {
+        hidden_qty = visible_qty;
+        initial_visible_qty = peak_qty;
+        visible_qty = std::min(hidden_qty, initial_visible_qty);
+        hidden_qty -= visible_qty;
+    }
+    return Order{
+        .side = side,
+        .id = id,
+        .price = price,
+        .visible_qty = visible_qty,
+        .initial_visible_qty = initial_visible_qty,
+        .hidden_qty = hidden_qty
+    };
 }
 
-void printMatches(const std::vector<OrderBook::Match>& matches) {
-    for (const auto& match: matches)
-        std::cout << match;
-}
-
-TEST_F(OrderBookFixture, AgressiveIcebergOrder) {
-    printMatches(book.processOrder(std::unique_ptr<Order>(
-        new Order(OrderType::BUY, 100322, 5103, 7500))));
+TEST_F(MatchingEngineFixture, AgressiveIcebergOrder) {
+    Printer::print(engine.process(makeOrder(Order::Side::BUY, 100322, 5103, 7500)));
     EXPECT_EQ(buffer.str(), "");
-    
-    OrderBookPrinter::print(book);
-    EXPECT_EQ(buffer.str(), 
+
+    Printer::print(engine);
+    EXPECT_EQ(buffer.str(),
     "+-----------------------------------------------------------------+\n"
     "| BUY                            | SELL                           |\n"
     "| Id       | Volume      | Price | Price | Volume      | Id       |\n"
@@ -52,14 +56,13 @@ TEST_F(OrderBookFixture, AgressiveIcebergOrder) {
     "+-----------------------------------------------------------------+\n");
     buffer.str("");
 
-    
-    printMatches(book.processOrder(std::unique_ptr<Order>(
-        new IcebergOrder(OrderType::SELL, 100345, 5103, 100000, 10000))));
+
+    Printer::print(engine.process(makeOrder(Order::Side::SELL, 100345, 5103, 100000, 10000)));
     EXPECT_EQ(buffer.str(), "100322,100345,5103,7500\n");
     buffer.str("");
 
-    OrderBookPrinter::print(book);
-    EXPECT_EQ(buffer.str(), 
+    Printer::print(engine);
+    EXPECT_EQ(buffer.str(),
     "+-----------------------------------------------------------------+\n"
     "| BUY                            | SELL                           |\n"
     "| Id       | Volume      | Price | Price | Volume      | Id       |\n"
@@ -70,18 +73,15 @@ TEST_F(OrderBookFixture, AgressiveIcebergOrder) {
 }
 
 
-TEST_F(OrderBookFixture, SimpleExample1) {
-    printMatches(book.processOrder(std::unique_ptr<Order>(
-        new IcebergOrder(OrderType::BUY, 1, 100, 50, 10))));
-    OrderBookPrinter::print(book);
-    printMatches(book.processOrder(std::unique_ptr<Order>(
-        new IcebergOrder(OrderType::SELL, 2, 10, 100, 10))));
-    OrderBookPrinter::print(book);
-    printMatches(book.processOrder(std::unique_ptr<Order>(
-        new IcebergOrder(OrderType::BUY, 3, 20, 100, 10))));
-    OrderBookPrinter::print(book);
+TEST_F(MatchingEngineFixture, SimpleExample1) {
+    Printer::print(engine.process(makeOrder(Order::Side::BUY, 1, 100, 50, 10)));
+    Printer::print(engine);
+    Printer::print(engine.process(makeOrder(Order::Side::SELL, 2, 10, 100, 10)));
+    Printer::print(engine);
+    Printer::print(engine.process(makeOrder(Order::Side::BUY, 3, 20, 100, 10)));
+    Printer::print(engine);
 
-    EXPECT_EQ(buffer.str(), 
+    EXPECT_EQ(buffer.str(),
     "+-----------------------------------------------------------------+\n"
     "| BUY                            | SELL                           |\n"
     "| Id       | Volume      | Price | Price | Volume      | Id       |\n"
@@ -106,9 +106,9 @@ TEST_F(OrderBookFixture, SimpleExample1) {
 }
 
 
-TEST_F(OrderBookFixture, SimpleExample2) {
-    printMatches(book.processOrder(std::unique_ptr<Order>(new Order(OrderType::BUY, 1, 10, 10))));
-    OrderBookPrinter::print(book);
+TEST_F(MatchingEngineFixture, SimpleExample2) {
+    Printer::print(engine.process(makeOrder(Order::Side::BUY, 1, 10, 10)));
+    Printer::print(engine);
 
     EXPECT_EQ(buffer.str(),
     "+-----------------------------------------------------------------+\n"
@@ -120,8 +120,8 @@ TEST_F(OrderBookFixture, SimpleExample2) {
     );
     buffer.str("");
 
-    printMatches(book.processOrder(std::unique_ptr<Order>(new Order(OrderType::BUY, 2, 11, 10))));
-    OrderBookPrinter::print(book);
+    Printer::print(engine.process(makeOrder(Order::Side::BUY, 2, 11, 10)));
+    Printer::print(engine);
 
     EXPECT_EQ(buffer.str(),
     "+-----------------------------------------------------------------+\n"
@@ -134,8 +134,8 @@ TEST_F(OrderBookFixture, SimpleExample2) {
     );
     buffer.str("");
 
-    printMatches(book.processOrder(std::unique_ptr<Order>(new Order(OrderType::SELL, 3, 9, 20))));
-    OrderBookPrinter::print(book);
+    Printer::print(engine.process(makeOrder(Order::Side::SELL, 3, 9, 20)));
+    Printer::print(engine);
 
     EXPECT_EQ(buffer.str(),
     "2,3,11,10\n"
@@ -149,26 +149,24 @@ TEST_F(OrderBookFixture, SimpleExample2) {
 }
 
 
-TEST_F(OrderBookFixture, ComplexExample1) {
-    printMatches(book.processOrder(std::unique_ptr<Order>(
-        new IcebergOrder(OrderType::SELL, 1, 100, 50, 10))));
-    OrderBookPrinter::print(book);
-    printMatches(book.processOrder(std::unique_ptr<Order>(new Order(OrderType::SELL, 2, 100, 10))));
-    OrderBookPrinter::print(book);
-    printMatches(book.processOrder(std::unique_ptr<Order>(new Order(OrderType::SELL, 3, 101, 5))));
-    OrderBookPrinter::print(book);
-    printMatches(book.processOrder(std::unique_ptr<Order>(new Order(OrderType::SELL, 4, 99, 3))));
-    OrderBookPrinter::print(book);
+TEST_F(MatchingEngineFixture, ComplexExample1) {
+    Printer::print(engine.process(makeOrder(Order::Side::SELL, 1, 100, 50, 10)));
+    Printer::print(engine);
+    Printer::print(engine.process(makeOrder(Order::Side::SELL, 2, 100, 10)));
+    Printer::print(engine);
+    Printer::print(engine.process(makeOrder(Order::Side::SELL, 3, 101, 5)));
+    Printer::print(engine);
+    Printer::print(engine.process(makeOrder(Order::Side::SELL, 4, 99, 3)));
+    Printer::print(engine);
 
-    printMatches(book.processOrder(std::unique_ptr<Order>(new Order(OrderType::BUY, 5, 105, 2))));
-    OrderBookPrinter::print(book);
-    printMatches(book.processOrder(std::unique_ptr<Order>(
-        new Order(OrderType::BUY, 6, 100, 31))));
-    OrderBookPrinter::print(book);
-    printMatches(book.processOrder(std::unique_ptr<Order>(new Order(OrderType::BUY, 7, 100, 31))));
-    OrderBookPrinter::print(book);
+    Printer::print(engine.process(makeOrder(Order::Side::BUY, 5, 105, 2)));
+    Printer::print(engine);
+    Printer::print(engine.process(makeOrder(Order::Side::BUY, 6, 100, 31)));
+    Printer::print(engine);
+    Printer::print(engine.process(makeOrder(Order::Side::BUY, 7, 100, 31)));
+    Printer::print(engine);
 
-    EXPECT_EQ(buffer.str(), 
+    EXPECT_EQ(buffer.str(),
     "+-----------------------------------------------------------------+\n"
     "| BUY                            | SELL                           |\n"
     "| Id       | Volume      | Price | Price | Volume      | Id       |\n"
@@ -230,10 +228,10 @@ TEST_F(OrderBookFixture, ComplexExample1) {
 }
 
 
-TEST_F(OrderBookFixture, ComplexExample2) {
-    printMatches(book.processOrder(
-        std::unique_ptr<Order>(new Order(OrderType::BUY, 82025, 99, 50000))));
-    OrderBookPrinter::print(book);
+TEST_F(MatchingEngineFixture, ComplexExample2) {
+    Printer::print(engine.process(
+        makeOrder(Order::Side::BUY, 82025, 99, 50000)));
+    Printer::print(engine);
 
     EXPECT_EQ(buffer.str(),
     "+-----------------------------------------------------------------+\n"
@@ -245,9 +243,9 @@ TEST_F(OrderBookFixture, ComplexExample2) {
     );
     buffer.str("");
 
-    printMatches(book.processOrder(
-        std::unique_ptr<Order>(new Order(OrderType::BUY, 82409, 98, 25500))));
-    OrderBookPrinter::print(book);
+    Printer::print(engine.process(
+        makeOrder(Order::Side::BUY, 82409, 98, 25500)));
+    Printer::print(engine);
 
     EXPECT_EQ(buffer.str(),
     "+-----------------------------------------------------------------+\n"
@@ -260,9 +258,9 @@ TEST_F(OrderBookFixture, ComplexExample2) {
     );
     buffer.str("");
 
-    printMatches(book.processOrder(
-        std::unique_ptr<Order>(new Order(OrderType::SELL, 81900, 101, 20000))));
-    OrderBookPrinter::print(book);
+    Printer::print(engine.process(
+        makeOrder(Order::Side::SELL, 81900, 101, 20000)));
+    Printer::print(engine);
 
     EXPECT_EQ(buffer.str(),
     "+-----------------------------------------------------------------+\n"
@@ -275,9 +273,8 @@ TEST_F(OrderBookFixture, ComplexExample2) {
     );
     buffer.str("");
 
-    printMatches(book.processOrder(std::unique_ptr<Order>(
-        new Order(OrderType::SELL, 82032, 100, 10000))));
-    OrderBookPrinter::print(book);
+    Printer::print(engine.process(makeOrder(Order::Side::SELL, 82032, 100, 10000)));
+    Printer::print(engine);
 
     EXPECT_EQ(buffer.str(),
     "+-----------------------------------------------------------------+\n"
@@ -290,9 +287,8 @@ TEST_F(OrderBookFixture, ComplexExample2) {
     );
     buffer.str("");
 
-    printMatches(book.processOrder(std::unique_ptr<Order>(
-        new Order(OrderType::SELL, 82257, 100, 7500))));
-    OrderBookPrinter::print(book);
+    Printer::print(engine.process(makeOrder(Order::Side::SELL, 82257, 100, 7500)));
+    Printer::print(engine);
 
     EXPECT_EQ(buffer.str(),
     "+-----------------------------------------------------------------+\n"
@@ -306,9 +302,8 @@ TEST_F(OrderBookFixture, ComplexExample2) {
     );
     buffer.str("");
 
-    printMatches(book.processOrder(std::unique_ptr<Order>(
-        new IcebergOrder(OrderType::BUY, 82500, 100, 100000, 10000))));
-    OrderBookPrinter::print(book);
+    Printer::print(engine.process(makeOrder(Order::Side::BUY, 82500, 100, 100000, 10000)));
+    Printer::print(engine);
 
     EXPECT_EQ(buffer.str(),
     "82500,82032,100,10000\n"
@@ -324,16 +319,12 @@ TEST_F(OrderBookFixture, ComplexExample2) {
     );
 }
 
-TEST_F(OrderBookFixture, ComplexExample3) {
-    printMatches(book.processOrder(std::unique_ptr<Order>(
-        new IcebergOrder(OrderType::BUY, 82532, 100, 82500, 10000))));
-    printMatches(book.processOrder(std::unique_ptr<Order>(
-        new Order(OrderType::BUY, 82025, 99, 50000))));
-    printMatches(book.processOrder(std::unique_ptr<Order>(
-        new Order(OrderType::BUY, 82409, 98, 25500))));
-    printMatches(book.processOrder(std::unique_ptr<Order>(
-        new Order(OrderType::SELL, 81900, 101, 20000))));
-    OrderBookPrinter::print(book);
+TEST_F(MatchingEngineFixture, ComplexExample3) {
+    Printer::print(engine.process(makeOrder(Order::Side::BUY, 82532, 100, 82500, 10000)));
+    Printer::print(engine.process(makeOrder(Order::Side::BUY, 82025, 99, 50000)));
+    Printer::print(engine.process(makeOrder(Order::Side::BUY, 82409, 98, 25500)));
+    Printer::print(engine.process(makeOrder(Order::Side::SELL, 81900, 101, 20000)));
+    Printer::print(engine);
 
     EXPECT_EQ(buffer.str(),
     "+-----------------------------------------------------------------+\n"
@@ -347,9 +338,8 @@ TEST_F(OrderBookFixture, ComplexExample3) {
     );
     buffer.str("");
 
-    printMatches(book.processOrder(std::unique_ptr<Order>(
-        new Order(OrderType::SELL, 82612, 100, 11000))));
-    OrderBookPrinter::print(book);
+    Printer::print(engine.process(makeOrder(Order::Side::SELL, 82612, 100, 11000)));
+    Printer::print(engine);
 
     EXPECT_EQ(buffer.str(),
     "82532,82612,100,11000\n"
@@ -364,9 +354,8 @@ TEST_F(OrderBookFixture, ComplexExample3) {
     );
     buffer.str("");
 
-    printMatches(book.processOrder(std::unique_ptr<Order>(
-        new IcebergOrder(OrderType::BUY, 82800, 100, 50000, 20000))));
-    OrderBookPrinter::print(book);
+    Printer::print(engine.process(makeOrder(Order::Side::BUY, 82800, 100, 50000, 20000)));
+    Printer::print(engine);
 
     EXPECT_EQ(buffer.str(),
     "+-----------------------------------------------------------------+\n"
@@ -382,9 +371,8 @@ TEST_F(OrderBookFixture, ComplexExample3) {
     buffer.str("");
 
 
-    printMatches(book.processOrder(std::unique_ptr<Order>(
-        new Order(OrderType::SELL, 83000, 100, 35000))));
-    OrderBookPrinter::print(book);
+    Printer::print(engine.process(makeOrder(Order::Side::SELL, 83000, 100, 35000)));
+    Printer::print(engine);
 
     EXPECT_EQ(buffer.str(),
     "82532,83000,100,15000\n"
