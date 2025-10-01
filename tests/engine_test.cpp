@@ -24,17 +24,22 @@ protected:
 
 Order makeOrder(Order::Side side, OrderId id, Price price, Quantity qty,
     Quantity iceberg_peak_qty = 0) {
+    Order::Type type = Order::Type::LIMIT;
     Quantity visible_qty = qty,
         peak_qty = qty,
         hidden_qty = 0;
+
     if (iceberg_peak_qty) {
+        type = Order::Type::ICEBERG;
         hidden_qty = visible_qty;
         peak_qty = iceberg_peak_qty;
         visible_qty = std::min(hidden_qty, peak_qty);
         hidden_qty -= visible_qty;
     }
+
     return Order{
         .side = side,
+        .type = type,
         .id = id,
         .price = price,
         .visible_qty = visible_qty,

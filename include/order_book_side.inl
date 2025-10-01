@@ -49,6 +49,7 @@ ALWAYS_INLINE Quantity OrderBookSide::consumeBest(Quantity qty) {
     order.visible_qty -= consumed;
     if (order.visible_qty == 0) {
         if (order.hidden_qty) {
+            assert(order.type == Order::Type::ICEBERG);
             order.visible_qty = std::min(order.hidden_qty, order.peak_qty);
             order.hidden_qty -= order.visible_qty;
             level.pushBack(order);

@@ -25,6 +25,7 @@ std::optional<Order> getOrder() {
 
     auto tokens = delimString(input, ',');
     Order::Side side = (tokens[0] == "B") ? Order::Side::BUY : Order::Side::SELL;
+    Order::Type type = Order::Type::LIMIT;
     OrderId id = std::stoi(tokens[1]);
     Price price = static_cast<Price>(std::stoi(tokens[2]));
     Quantity qty = std::stoi(tokens[3]),
@@ -33,6 +34,7 @@ std::optional<Order> getOrder() {
         hidden_qty = 0;
 
     if (tokens.size() > 4) {
+        type = Order::Type::ICEBERG;
         peak_qty = std::stoi(tokens[4]);
         hidden_qty = visible_qty;
         visible_qty = std::min(peak_qty, hidden_qty);
@@ -41,7 +43,7 @@ std::optional<Order> getOrder() {
 
     return Order{
         .side = side,
-        .type = Order::Type::LIMIT,
+        .type = type,
         .id = id,
         .price = price,
         .visible_qty = visible_qty,
