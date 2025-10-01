@@ -65,8 +65,8 @@ private:
         OrderBookSideIterator& operator++() noexcept;
         OrderBookSideIterator operator++(int) noexcept;
 
-        bool operator==(const OrderBookSideIterator&) const = default;
-        bool operator!=(const OrderBookSideIterator&) const = default;
+        bool operator==(const OrderBookSideIterator&) const noexcept;
+        bool operator!=(const OrderBookSideIterator&) const noexcept;
 
     private:
         explicit OrderBookSideIterator(
@@ -74,7 +74,7 @@ private:
 
         friend class OrderBookSide;
 
-        const LevelsMap* levels_map_;
+        const LevelsMap& levels_map_;
         LevelsMap::const_iterator current_;
         Level::Iterator level_current_;
 

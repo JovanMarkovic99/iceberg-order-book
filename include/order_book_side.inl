@@ -23,12 +23,14 @@ ALWAYS_INLINE auto OrderBookSide::comparator() const noexcept -> const Comparato
 
 ALWAYS_INLINE Price OrderBookSide::bestPrice() const {
     assert(!empty());
+
     const auto& [price, level] = *(levels_map_.cbegin());
     return price;
 }
 
 ALWAYS_INLINE const Order& OrderBookSide::bestOrder() const {
     assert(!empty());
+
     const auto& [price, level] = *(levels_map_.cbegin());
     return level.front();
 }
@@ -44,6 +46,7 @@ ALWAYS_INLINE void OrderBookSide::addOrder(const Order& order) {
 
 ALWAYS_INLINE Quantity OrderBookSide::consumeBest(Quantity qty) {
     assert(!empty());
+
     auto& [price, level] = *(levels_map_.begin());
     auto& order = level.front();
     auto consumed = std::min(qty, order.visible_qty);
@@ -51,6 +54,7 @@ ALWAYS_INLINE Quantity OrderBookSide::consumeBest(Quantity qty) {
     if (order.visible_qty == 0) {
         if (order.hidden_qty) {
             assert(order.type == Order::Type::ICEBERG);
+
             order.visible_qty = std::min(order.hidden_qty, order.peak_qty);
             order.hidden_qty -= order.visible_qty;
             level.pushBack(order);
@@ -73,15 +77,18 @@ ALWAYS_INLINE auto OrderBookSide::end() const noexcept -> Iterator {
 
 ALWAYS_INLINE OrderBookSide::OrderBookSideIterator::OrderBookSideIterator(
     const LevelsMap& levels_map, LevelsMap::const_iterator start)
-    : levels_map_(&levels_map)
+    : levels_map_(levels_map)
     , current_(start) {
-    if (current_ != std::cend(*levels_map_))
+    while (current_ != std::cend(levels_map_) && current_->second.begin() == current_->second.end())
+        ++current_;
+    if (current_ != std::cend(levels_map_))
         level_current_ = current_->second.begin();
 }
 
 ALWAYS_INLINE auto OrderBookSide::OrderBookSideIterator::operator*() const noexcept -> reference {
-    assert(current_ != std::cend(*levels_map_));
+    assert(current_ != std::cend(levels_map_));
     assert(level_current_ != current_->second.end());
+
     return *level_current_;
 }
 
@@ -91,10 +98,13 @@ ALWAYS_INLINE auto OrderBookSide::OrderBookSideIterator::operator->() const noex
 
 ALWAYS_INLINE auto OrderBookSide::OrderBookSideIterator::operator++() noexcept
 -> OrderBookSideIterator& {
+    assert(current_ != std::cend(levels_map_));
+    assert(level_current_ != current_->second.end());
+
     if (++level_current_ != current_->second.end())
         return *this;
 
-    level_current_ = (++current_ != std::cend(*levels_map_))
+    level_current_ = (++current_ != std::cend(levels_map_))
         ? current_->second.begin()
         : Level::Iterator{};
     return *this;
@@ -105,4 +115,16 @@ ALWAYS_INLINE auto OrderBookSide::OrderBookSideIterator::operator++(int) noexcep
     OrderBookSideIterator tmp(*this);
     ++(*this);
     return tmp;
+}
+
+ALWAYS_INLINE bool OrderBookSide::OrderBookSideIterator::operator==(
+    const OrderBookSideIterator& iter) const noexcept {
+    return &levels_map_ == &(iter.levels_map_) &&
+        current_ == iter.current_ &&
+        level_current_ == iter.level_current_;
+}
+
+ALWAYS_INLINE bool OrderBookSide::OrderBookSideIterator::operator!=(
+    const OrderBookSideIterator& iter) const noexcept {
+    return !operator==(iter);
 }

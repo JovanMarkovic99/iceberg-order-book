@@ -11,6 +11,7 @@ ALWAYS_INLINE MatchingEngine::MatchingEngine()
 ALWAYS_INLINE const std::vector<Trade>& MatchingEngine::process(Order aggressive_order) {
     trades_.clear();
     passive_id_idx_.clear();
+
     auto [contra_side, same_side] = (aggressive_order.side == Order::Side::BUY)
         ? std::tie(sell_side_, buy_side_)
         : std::tie(buy_side_, sell_side_);
@@ -28,13 +29,10 @@ ALWAYS_INLINE void MatchingEngine::match(Order& aggressive_order, OrderBookSide&
     auto aggressive_qty = aggressive_order.visible_qty + aggressive_order.hidden_qty;
     while (aggressive_qty
         && !contra_side.empty() && !cmp(aggressive_order.price, contra_side.bestPrice())) {
-        auto level_price = contra_side.bestPrice();
-        do {
-            auto passive_order = contra_side.bestOrder();
-            auto trade_qty = contra_side.consumeBest(aggressive_qty);
-            addTrade(aggressive_order, passive_order, trade_qty);
-            aggressive_qty -= trade_qty;
-        } while (aggressive_qty && !contra_side.empty() && contra_side.bestPrice() == level_price);
+        auto passive_order = contra_side.bestOrder();
+        auto trade_qty = contra_side.consumeBest(aggressive_qty);
+        addTrade(aggressive_order, passive_order, trade_qty);
+        aggressive_qty -= trade_qty;
     }
 
     aggressive_order.visible_qty = std::min(aggressive_qty, aggressive_order.peak_qty);
