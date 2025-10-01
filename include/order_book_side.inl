@@ -43,6 +43,7 @@ ALWAYS_INLINE void OrderBookSide::addOrder(const Order& order) {
 }
 
 ALWAYS_INLINE Quantity OrderBookSide::consumeBest(Quantity qty) {
+    assert(!empty());
     auto& [price, level] = *(levels_map_.begin());
     auto& order = level.front();
     auto consumed = std::min(qty, order.visible_qty);

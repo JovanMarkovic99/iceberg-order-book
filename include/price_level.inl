@@ -56,6 +56,8 @@ template <class Allocator>
 ALWAYS_INLINE void PriceLevel<Allocator>::popFront() {
     assert(head_);
     auto* node = std::exchange(head_, head_->next);
+    if (!head_)
+        tail_ = nullptr;
     node->~OrderNode();
     alloc_.deallocate(node, 1);
 }
