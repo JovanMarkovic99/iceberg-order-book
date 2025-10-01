@@ -34,13 +34,3 @@ The project uses CMake as a build system and Google Test for unit testing. To bu
     ```
 
 5. Run the program `main.exe`.
-
-## Design Considerations and Future Improvements
-
-While the current design provides efficient time complexity for most operations, it does have certain limitations. Notably, random access and modification of orders may suffer from suboptimal time complexity.
-
-To address this, future improvements could include:
-
-* **Hashmap for Order Lookup**: Introducing a hashmap could achieve O(1) lookup of order locations, improving the efficiency of order modification and removal.
-
-* **Doubly-Linked List for Order Storage**: To achieve true O(1) time complexity for order modification, the deque in the Limit class could be substituted with a doubly-linked list. This would allow for efficient removal of orders from any position in the list.
