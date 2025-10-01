@@ -30,11 +30,10 @@ ALWAYS_INLINE void MatchingEngine::match(Order& aggressive_order, OrderBookSide&
         && !contra_side.empty() && !cmp(aggressive_order.price, contra_side.bestPrice())) {
         auto level_price = contra_side.bestPrice();
         do {
-            const auto& passive_order = contra_side.bestOrder();
-            auto trade_qty = std::min(aggressive_qty, passive_order.visible_qty);
+            auto passive_order = contra_side.bestOrder();
+            auto trade_qty = contra_side.consumeBest(aggressive_qty);
             addTrade(aggressive_order, passive_order, trade_qty);
             aggressive_qty -= trade_qty;
-            contra_side.consumeBest(trade_qty);
         } while (aggressive_qty && !contra_side.empty() && contra_side.bestPrice() == level_price);
     }
 
